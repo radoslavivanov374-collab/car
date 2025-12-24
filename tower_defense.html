@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Защита от Зомбита</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #2c3e50, #34495e);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        #gameContainer {
+            background: #ecf0f1;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        #topBar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            background: #34495e;
+            padding: 15px;
+            border-radius: 5px;
+            color: white;
+        }
+        .stat {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .stat span {
+            color: #f1c40f;
+        }
+        #shopBar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #2c3e50;
+            border-radius: 5px;
+        }
+        .shopItem {
+            background: #34495e;
+            border: 3px solid #555;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            color: white;
+            min-width: 100px;
+        }
+        .shopItem:hover {
+            transform: scale(1.05);
+            border-color: #f1c40f;
+        }
+        .shopItem.selected {
+            border-color: #2ecc71;
+            background: #27ae60;
+        }
+        .shopItem.cantAfford {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .icon {
+            font-size: 40px;
+            margin-bottom: 5px;
+        }
+        .price {
+            color: #f1c40f;
+            font-weight: bold;
+        }
+        canvas {
+            border: 4px solid #2c3e50;
+            background: #95a5a6;
+            display: block;
+            border-radius: 5px;
+        }
+        #gameOver {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 10px;
+            display: none;
+            text-align: center;
+            color: white;
+            z-index: 1000;
+        }
+        #gameOver h2 {
+            color: #e74c3c;
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        #gameOver p {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        button {
+            font-size: 20px;
+            padding: 15px 30px;
+            cursor: pointer;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #2ecc71;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="topBar">
+            <div class="stat">💰 Монети: <span id="money">5</span></div>
+            <div class="stat">🏛️ Живот на града: <span id="cityHealth">20</span></div>
+            <div class="stat">💀 Убити: <span id="kills">0</span></div>
+            <div class="stat">🌊 Вълна: <span id="wave">1</span></div>
+            <div class="stat">⏱️ Време: <span id="timer">0:00</span></div>
+        </div>
+        
+        <div id="shopBar">
+            <div class="shopItem" data-type="pistol" data-cost="1">
+                <div class="icon">🔫</div>
+                <div>Пистолет</div>
+                <div class="price">1 💰</div>
+            </div>
+            <div class="shopItem" data-type="rifle" data-cost="3">
+                <div class="icon">🎯</div>
+                <div>Пушка</div>
+                <div class="price">3 💰</div>
+            </div>
+            <div class="shopItem" data-type="tank" data-cost="5">
+                <div class="icon">🚜</div>
+                <div>Танк</div>
+                <div class="price">5 💰</div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="900" height="500"></canvas>
+    </div>
+
+    <div id="gameOver">
+        <h2>КРАЙ НА ИГРАТА!</h2>
+        <p>Градът е унищожен!</p>
+        <p>Убити зомбита: <span id="finalKills">0</span></p>
+        <button onclick="restartGame()">Играй отново</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game state
+        let money = 5;
+        let cityHealth = 20;
+        let kills = 0;
+        let gameRunning = true;
+        let selectedTower = null;
+        
+        // Money generation
+        let moneyTimer = 0;
+        const moneyInterval = 120; // 120 frames = 2 seconds at 60fps
+        
+        // Grid system
+        const gridSize = 50;
+        const pathY = 250; // Middle of canvas
+        const grid = [];
+        
+        // Initialize grid
+        for (let x = 0; x < canvas.width; x += gridSize) {
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                // Don't allow towers on the path
+                if (y >= pathY - gridSize && y <= pathY + gridSize) {
+                    grid.push({ x, y, occupied: false, isPath: true });
+                } else {
+                    grid.push({ x, y, occupied: false, isPath: false });
+                }
+            }
+        }
+        
+        // Towers
+        let towers = [];
+        const towerTypes = {
+            pistol: { cost: 1, fireRate: 60, damage: 1, range: 120, icon: '🔫', color: '#3498db' },
+            rifle: { cost: 3, fireRate: 30, damage: 2, range: 150, icon: '🎯', color: '#e67e22' },
+            tank: { cost: 5, fireRate: 15, damage: 3, range: 180, icon: '🚜', color: '#95a5a6' }
+        };
+        
+        // Zombies
+        let zombies = [];
+        let zombieSpawnTimer = 0;
+        let zombieSpawnRate = 120; // Spawn every 2 seconds
+        let wave = 1;
+        let bossSpawnCounter = 0;
+        let bossSpawnInterval = 7;
+        let gameTime = 0; // Game time in frames
+        let finalBossSpawned = false;
+        let megaBossSpawned = false;
+        let ultraBossSpawned = false;
+        
+        // Bullets
+        let bullets = [];
+        
+        // City position
+        const city = { x: canvas.width - 100, y: pathY, width: 80, height: 80 };
+        
+        // Shop interaction
+        document.querySelectorAll('.shopItem').forEach(item => {
+            item.addEventListener('click', () => {
+                const cost = parseInt(item.dataset.cost);
+                const type = item.dataset.type;
+                
+                if (money >= cost) {
+                    // Deselect others
+                    document.querySelectorAll('.shopItem').forEach(i => i.classList.remove('selected'));
+                    
+                    if (selectedTower === type) {
+                        selectedTower = null;
+                    } else {
+                        selectedTower = type;
+                        item.classList.add('selected');
+                    }
+                }
+            });
+        });
+        
+        // Canvas click - place tower
+        canvas.addEventListener('click', (e) => {
+            if (!selectedTower || !gameRunning) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find grid cell
+            const gridX = Math.floor(x / gridSize) * gridSize;
+            const gridY = Math.floor(y / gridSize) * gridSize;
+            
+            const cell = grid.find(g => g.x === gridX && g.y === gridY);
+            
+            if (cell && !cell.occupied && !cell.isPath) {
+                const towerType = towerTypes[selectedTower];
+                
+                if (money >= towerType.cost) {
+                    money -= towerType.cost;
+                    cell.occupied = true;
+                    
+                    towers.push({
+                        x: gridX + gridSize / 2,
+                        y: gridY + gridSize / 2,
+                        type: selectedTower,
+                        fireTimer: 0,
+                        gridX: gridX,
+                        gridY: gridY,
+                        ...towerType
+                    });
+                    
+                    updateUI();
+                    
+                    // Deselect
+                    selectedTower = null;
+                    document.querySelectorAll('.shopItem').forEach(i => i.classList.remove('selected'));
+                }
+            }
+        });
+        
+        // Right click to remove tower
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (!gameRunning) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Find tower at this position
+            towers.forEach((tower, index) => {
+                const dist = Math.hypot(x - tower.x, y - tower.y);
+                if (dist < 25) {
+                    // Remove tower
+                    towers.splice(index, 1);
+                    
+                    // Free up the grid cell
+                    const cell = grid.find(g => g.x === tower.gridX && g.y === tower.gridY);
+                    if (cell) cell.occupied = false;
+                }
+            });
+        });
+        
+        // Spawn zombie
+        function spawnZombie() {
+            bossSpawnCounter++;
+            
+            const isBoss = bossSpawnCounter >= bossSpawnInterval;
+            if (isBoss) bossSpawnCounter = 0;
+            
+            let baseHealth, size, speed, bossType;
+            
+            if (wave === 1) {
+                // Wave 1: Normal bosses
+                baseHealth = isBoss ? 50 : 8;
+                size = isBoss ? 80 : 40;
+                speed = isBoss ? 0.25 : 0.6;
+                bossType = 'normal';
+            } else if (wave === 2) {
+                // Wave 2: Purple bosses with 100 health
+                baseHealth = isBoss ? 100 : 12;
+                size = isBoss ? 90 : 40;
+                speed = isBoss ? 0.3 : 0.7;
+                bossType = 'purple';
+            } else if (wave === 3) {
+                // Wave 3: Elite bosses
+                baseHealth = isBoss ? 150 : 15;
+                size = isBoss ? 100 : 40;
+                speed = isBoss ? 0.35 : 0.8;
+                bossType = 'elite';
+            } else if (wave === 4) {
+                // Wave 4: Stronger enemies
+                baseHealth = isBoss ? 200 : 20;
+                size = isBoss ? 105 : 40;
+                speed = isBoss ? 0.4 : 0.9;
+                bossType = 'advanced';
+            } else {
+                // Wave 5: Strongest enemies
+                baseHealth = isBoss ? 250 : 25;
+                size = isBoss ? 110 : 40;
+                speed = isBoss ? 0.45 : 1.0;
+                bossType = 'supreme';
+            }
+            
+            zombies.push({
+                x: 0,
+                y: pathY,
+                width: size,
+                height: size,
+                speed: speed,
+                health: baseHealth,
+                maxHealth: baseHealth,
+                isBoss: isBoss,
+                bossType: bossType
+            });
+        }
+        
+        // Spawn final boss
+        function spawnFinalBoss() {
+            if (finalBossSpawned) return;
+            finalBossSpawned = true;
+            
+            zombies.push({
+                x: 0,
+                y: pathY,
+                width: 120,
+                height: 120,
+                speed: 0.2,
+                health: 500,
+                maxHealth: 500,
+                isBoss: true,
+                bossType: 'final'
+            });
+        }
+        
+        // Spawn mega boss at 10 minutes
+        function spawnMegaBoss() {
+            if (megaBossSpawned) return;
+            megaBossSpawned = true;
+            
+            zombies.push({
+                x: 0,
+                y: pathY,
+                width: 150,
+                height: 150,
+                speed: 0.15,
+                health: 1000,
+                maxHealth: 1000,
+                isBoss: true,
+                bossType: 'mega'
+            });
+        }
+        
+        // Spawn ultra boss at 7 minutes
+        function spawnUltraBoss() {
+            if (ultraBossSpawned) return;
+            ultraBossSpawned = true;
+            
+            zombies.push({
+                x: 0,
+                y: pathY,
+                width: 135,
+                height: 135,
+                speed: 0.18,
+                health: 750,
+                maxHealth: 750,
+                isBoss: true,
+                bossType: 'ultra'
+            });
+        }
+        
+        // Update UI
+        function updateUI() {
+            document.getElementById('money').textContent = money;
+            document.getElementById('cityHealth').textContent = cityHealth;
+            document.getElementById('kills').textContent = kills;
+            document.getElementById('wave').textContent = wave;
+            
+            const seconds = Math.floor(gameTime / 60);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            document.getElementById('timer').textContent = minutes + ':' + (remainingSeconds < 10 ? '0' : '') + remainingSeconds;
+            
+            // Update shop items affordability
+            document.querySelectorAll('.shopItem').forEach(item => {
+                const cost = parseInt(item.dataset.cost);
+                if (money < cost) {
+                    item.classList.add('cantAfford');
+                } else {
+                    item.classList.remove('cantAfford');
+                }
+            });
+        }
+        
+        // Draw grid
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.lineWidth = 1;
+            
+            grid.forEach(cell => {
+                if (!cell.isPath) {
+                    ctx.strokeRect(cell.x, cell.y, gridSize, gridSize);
+                    
+                    // Highlight on hover with selected tower
+                    if (selectedTower && !cell.occupied) {
+                        ctx.fillStyle = 'rgba(46, 204, 113, 0.3)';
+                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
+                    }
+                }
+            });
+        }
+        
+        // Draw path
+        function drawPath() {
+            ctx.fillStyle = '#7f8c8d';
+            ctx.fillRect(0, pathY - 40, canvas.width, 80);
+            
+            // Path lines
+            ctx.strokeStyle = '#f1c40f';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([20, 10]);
+            ctx.beginPath();
+            ctx.moveTo(0, pathY);
+            ctx.lineTo(canvas.width, pathY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        // Draw city
+        function drawCity() {
+            // Building
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(city.x, city.y - 40, city.width, city.height);
+            
+            // Windows
+            ctx.fillStyle = '#f39c12';
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    ctx.fillRect(city.x + 10 + i * 20, city.y - 30 + j * 20, 10, 10);
+                }
+            }
+            
+            // Flag
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillRect(city.x + 35, city.y - 60, 10, 20);
+            ctx.beginPath();
+            ctx.moveTo(city.x + 45, city.y - 60);
+            ctx.lineTo(city.x + 65, city.y - 50);
+            ctx.lineTo(city.x + 45, city.y - 40);
+            ctx.fill();
+        }
+        
+        // Draw zombie
+        function drawZombie(zombie) {
+            let bodyColor, headColor, eyeColor;
+            
+            if (zombie.isBoss) {
+                if (zombie.bossType === 'mega') {
+                    bodyColor = '#1a0033';
+                    headColor = '#330066';
+                    eyeColor = '#FF00FF';
+                } else if (zombie.bossType === 'ultra') {
+                    bodyColor = '#8B4513';
+                    headColor = '#D2691E';
+                    eyeColor = '#FFA500';
+                } else if (zombie.bossType === 'final') {
+                    bodyColor = '#000000';
+                    headColor = '#8B0000';
+                    eyeColor = '#FF0000';
+                } else if (zombie.bossType === 'supreme') {
+                    bodyColor = '#2F4F4F';
+                    headColor = '#708090';
+                    eyeColor = '#00FFFF';
+                } else if (zombie.bossType === 'advanced') {
+                    bodyColor = '#800020';
+                    headColor = '#C41E3A';
+                    eyeColor = '#FFD700';
+                } else if (zombie.bossType === 'purple') {
+                    bodyColor = '#8B008B';
+                    headColor = '#9370DB';
+                    eyeColor = '#FFD700';
+                } else if (zombie.bossType === 'elite') {
+                    bodyColor = '#4B0082';
+                    headColor = '#6A0DAD';
+                    eyeColor = '#FF4500';
+                } else {
+                    bodyColor = '#8B0000';
+                    headColor = '#DC143C';
+                    eyeColor = '#FFD700';
+                }
+            } else {
+                bodyColor = '#27ae60';
+                headColor = '#2ecc71';
+                eyeColor = '#e74c3c';
+            }
+            
+            const headRadius = zombie.isBoss ? (zombie.bossType === 'mega' ? 60 : zombie.bossType === 'ultra' ? 55 : zombie.bossType === 'final' ? 50 : zombie.width / 2.5) : 15;
+            const eyeSize = zombie.isBoss ? (zombie.bossType === 'mega' ? 18 : zombie.bossType === 'ultra' ? 16 : zombie.bossType === 'final' ? 15 : 10) : 5;
+            
+            // Body
+            ctx.fillStyle = bodyColor;
+            ctx.fillRect(zombie.x, zombie.y - 20, zombie.width, zombie.height);
+            
+            // Body details for mega and final boss
+            if (zombie.bossType === 'mega') {
+                ctx.fillStyle = '#330066';
+                ctx.fillRect(zombie.x + 10, zombie.y, zombie.width - 20, zombie.height - 20);
+                // Extra armor
+                ctx.fillStyle = '#660099';
+                ctx.fillRect(zombie.x + 20, zombie.y + 10, zombie.width - 40, zombie.height - 30);
+            } else if (zombie.bossType === 'ultra') {
+                ctx.fillStyle = '#D2691E';
+                ctx.fillRect(zombie.x + 10, zombie.y, zombie.width - 20, zombie.height - 20);
+                ctx.fillStyle = '#CD853F';
+                ctx.fillRect(zombie.x + 20, zombie.y + 10, zombie.width - 40, zombie.height - 30);
+            } else if (zombie.bossType === 'final') {
+                ctx.fillStyle = '#8B0000';
+                ctx.fillRect(zombie.x + 10, zombie.y, zombie.width - 20, zombie.height - 20);
+            }
+            
+            // Head
+            ctx.fillStyle = headColor;
+            ctx.beginPath();
+            ctx.arc(zombie.x + zombie.width / 2, zombie.y - 25, headRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Eyes
+            ctx.fillStyle = eyeColor;
+            const eyeOffset = zombie.isBoss ? (zombie.bossType === 'final' ? 20 : 15) : 12;
+            ctx.fillRect(zombie.x + eyeOffset, zombie.y - 30, eyeSize, eyeSize);
+            ctx.fillRect(zombie.x + zombie.width - eyeOffset - eyeSize, zombie.y - 30, eyeSize, eyeSize);
+            
+            // Boss crown/skull/demon
+            if (zombie.isBoss) {
+                ctx.font = (zombie.bossType === 'mega' ? '40' : zombie.bossType === 'ultra' ? '38' : zombie.bossType === 'final' ? '35' : '20') + 'px Arial';
+                ctx.textAlign = 'center';
+                if (zombie.bossType === 'mega') {
+                    ctx.fillText('👹', zombie.x + zombie.width / 2, zombie.y - 100);
+                } else if (zombie.bossType === 'ultra') {
+                    ctx.fillText('🔥', zombie.x + zombie.width / 2, zombie.y - 90);
+                } else if (zombie.bossType === 'final') {
+                    ctx.fillText('💀', zombie.x + zombie.width / 2, zombie.y - 80);
+                } else {
+                    ctx.fillText('👑', zombie.x + zombie.width / 2, zombie.y - 45);
+                }
+            }
+            
+            // Health bar
+            const barY = zombie.isBoss ? (zombie.bossType === 'mega' ? zombie.y - 120 : zombie.bossType === 'ultra' ? zombie.y - 110 : zombie.bossType === 'final' ? zombie.y - 100 : zombie.y - 55) : zombie.y - 40;
+            const barHeight = zombie.bossType === 'mega' ? 12 : zombie.bossType === 'ultra' ? 11 : zombie.bossType === 'final' ? 10 : 6;
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(zombie.x, barY, zombie.width, barHeight);
+            
+            let healthBarColor = '#2ecc71';
+            if (zombie.bossType === 'purple') healthBarColor = '#9370DB';
+            if (zombie.bossType === 'elite') healthBarColor = '#6A0DAD';
+            if (zombie.bossType === 'final') healthBarColor = '#FF0000';
+            if (zombie.bossType === 'mega') healthBarColor = '#FF00FF';
+            if (zombie.bossType === 'ultra') healthBarColor = '#FFA500';
+            if (zombie.bossType === 'advanced') healthBarColor = '#FFD700';
+            if (zombie.bossType === 'supreme') healthBarColor = '#00FFFF';
+            
+            ctx.fillStyle = healthBarColor;
+            ctx.fillRect(zombie.x, barY, (zombie.health / zombie.maxHealth) * zombie.width, barHeight);
+            
+            // Health text for bosses
+            if (zombie.isBoss) {
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold ' + (zombie.bossType === 'mega' ? '18' : zombie.bossType === 'ultra' ? '17' : zombie.bossType === 'final' ? '16' : '12') + 'px Arial';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.strokeText(Math.ceil(zombie.health), zombie.x + zombie.width / 2, barY + (barHeight / 2) + 4);
+                ctx.fillText(Math.ceil(zombie.health), zombie.x + zombie.width / 2, barY + (barHeight / 2) + 4);
+            }
+        }
+        
+        // Draw tower
+        function drawTower(tower) {
+            // Range circle (semi-transparent)
+            ctx.strokeStyle = 'rgba(52, 152, 219, 0.3)';
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.1)';
+            ctx.beginPath();
+            ctx.arc(tower.x, tower.y, tower.range, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Tower base
+            ctx.fillStyle = tower.color;
+            ctx.fillRect(tower.x - 20, tower.y - 20, 40, 40);
+            
+            // Tower icon
+            ctx.font = '30px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(tower.icon, tower.x, tower.y);
+        }
+        
+        // Draw bullet
+        function drawBullet(bullet) {
+            ctx.fillStyle = '#f39c12';
+            ctx.beginPath();
+            ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Update game
+        function update() {
+            if (!gameRunning) return;
+            
+            // Update game time
+            gameTime++;
+            
+            // Wave system based on time (60 fps)
+            const seconds = Math.floor(gameTime / 60);
+            
+            if (seconds < 60) {
+                // Wave 1: 0-60 seconds
+                wave = 1;
+                zombieSpawnRate = 120; // Every 2 seconds
+                bossSpawnInterval = 7;
+            } else if (seconds < 240) {
+                // Wave 2: 60-240 seconds (4 minutes total)
+                wave = 2;
+                zombieSpawnRate = 80; // Every 1.33 seconds
+                bossSpawnInterval = 5; // More frequent bosses
+            } else if (seconds < 420) {
+                // Wave 3: 240-420 seconds (7 minutes total)
+                wave = 3;
+                zombieSpawnRate = 60; // Every 1 second
+                bossSpawnInterval = 3; // Very frequent bosses
+                
+                // Spawn final boss at 5 minutes (300 seconds)
+                if (seconds >= 300 && !finalBossSpawned) {
+                    spawnFinalBoss();
+                }
+            } else if (seconds < 600) {
+                // Wave 4: 420-600 seconds (10 minutes total)
+                wave = 4;
+                zombieSpawnRate = 45; // Every 0.75 seconds
+                bossSpawnInterval = 2; // Even more frequent
+                
+                // Spawn ultra boss at 7 minutes (420 seconds)
+                if (seconds >= 420 && !ultraBossSpawned) {
+                    spawnUltraBoss();
+                }
+            } else {
+                // Wave 5: 600+ seconds (after 10 minutes)
+                wave = 5;
+                zombieSpawnRate = 30; // Every 0.5 seconds
+                bossSpawnInterval = 2; // Maximum frequency
+                
+                // Spawn mega boss at 10 minutes (600 seconds)
+                if (seconds >= 600 && !megaBossSpawned) {
+                    spawnMegaBoss();
+                }
+            }
+            
+            // Update UI every second
+            if (gameTime % 60 === 0) {
+                updateUI();
+            }
+            
+            // Money generation
+            moneyTimer++;
+            if (moneyTimer >= moneyInterval) {
+                money++;
+                moneyTimer = 0;
+                updateUI();
+            }
+            
+            // Spawn zombies
+            zombieSpawnTimer++;
+            if (zombieSpawnTimer >= zombieSpawnRate) {
+                spawnZombie();
+                zombieSpawnTimer = 0;
+            }
+            
+            // Update zombies
+            zombies.forEach((zombie, zIndex) => {
+                zombie.x += zombie.speed;
+                
+                // Check if reached city
+                if (zombie.x + zombie.width >= city.x) {
+                    let damage = 1;
+                    if (zombie.isBoss) {
+                        if (zombie.bossType === 'mega') damage = 20;
+                        else if (zombie.bossType === 'ultra') damage = 18;
+                        else if (zombie.bossType === 'final') damage = 20;
+                        else if (zombie.bossType === 'supreme') damage = 17;
+                        else if (zombie.bossType === 'advanced') damage = 16;
+                        else if (zombie.bossType === 'elite') damage = 15;
+                        else if (zombie.bossType === 'purple') damage = 12;
+                        else damage = 10;
+                    }
+                    cityHealth -= damage;
+                    zombies.splice(zIndex, 1);
+                    updateUI();
+                    
+                    if (cityHealth <= 0) {
+                        gameOver();
+                    }
+                }
+            });
+            
+            // Update towers
+            towers.forEach(tower => {
+                tower.fireTimer++;
+                
+                if (tower.fireTimer >= tower.fireRate) {
+                    // Find closest zombie in range
+                    let closestZombie = null;
+                    let closestDist = Infinity;
+                    
+                    zombies.forEach(zombie => {
+                        const dist = Math.hypot(
+                            zombie.x + zombie.width / 2 - tower.x,
+                            zombie.y - tower.y
+                        );
+                        
+                        if (dist < tower.range && dist < closestDist) {
+                            closestZombie = zombie;
+                            closestDist = dist;
+                        }
+                    });
+                    
+                    // Shoot at closest zombie
+                    if (closestZombie) {
+                        const angle = Math.atan2(
+                            closestZombie.y - tower.y,
+                            closestZombie.x + closestZombie.width / 2 - tower.x
+                        );
+                        
+                        bullets.push({
+                            x: tower.x,
+                            y: tower.y,
+                            vx: Math.cos(angle) * 8,
+                            vy: Math.sin(angle) * 8,
+                            damage: tower.damage,
+                            target: closestZombie
+                        });
+                        
+                        tower.fireTimer = 0;
+                    }
+                }
+            });
+            
+            // Update bullets
+            bullets.forEach((bullet, bIndex) => {
+                bullet.x += bullet.vx;
+                bullet.y += bullet.vy;
+                
+                // Check collision with zombies
+                zombies.forEach((zombie, zIndex) => {
+                    if (bullet.x > zombie.x && bullet.x < zombie.x + zombie.width &&
+                        bullet.y > zombie.y - 20 && bullet.y < zombie.y + 20) {
+                        
+                        zombie.health -= bullet.damage;
+                        bullets.splice(bIndex, 1);
+                        
+                        if (zombie.health <= 0) {
+                            zombies.splice(zIndex, 1);
+                            kills++;
+                            updateUI();
+                        }
+                    }
+                });
+                
+                // Remove off-screen bullets
+                if (bullet.x < 0 || bullet.x > canvas.width ||
+                    bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(bIndex, 1);
+                }
+            });
+        }
+        
+        // Draw game
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawPath();
+            drawGrid();
+            drawCity();
+            
+            towers.forEach(tower => drawTower(tower));
+            zombies.forEach(zombie => drawZombie(zombie));
+            bullets.forEach(bullet => drawBullet(bullet));
+        }
+        
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('finalKills').textContent = kills;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        // Restart game
+        function restartGame() {
+            gameRunning = true;
+            money = 5;
+            cityHealth = 20;
+            kills = 0;
+            wave = 1;
+            bossSpawnCounter = 0;
+            gameTime = 0;
+            finalBossSpawned = false;
+            megaBossSpawned = false;
+            ultraBossSpawned = false;
+            zombieSpawnRate = 120;
+            bossSpawnInterval = 7;
+            towers = [];
+            zombies = [];
+            bullets = [];
+            zombieSpawnTimer = 0;
+            moneyTimer = 0;
+            selectedTower = null;
+            
+            // Reset grid
+            grid.forEach(cell => {
+                if (!cell.isPath) cell.occupied = false;
+            });
+            
+            updateUI();
+            document.querySelectorAll('.shopItem').forEach(i => i.classList.remove('selected'));
+            document.getElementById('gameOver').style.display = 'none';
+            gameLoop();
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start game
+        updateUI();
+        gameLoop();
+    </script>
+</body>
+</html>
