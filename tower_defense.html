@@ -184,6 +184,11 @@
         </div>
         
         <div id="shopBar">
+            <div class="shopItem" data-type="knife" data-cost="1">
+                <div class="icon">🔪</div>
+                <div>Ножче</div>
+                <div class="price">1 💰</div>
+            </div>
             <div class="shopItem" data-type="pistol" data-cost="1">
                 <div class="icon">🔫</div>
                 <div>Пистолет</div>
@@ -198,6 +203,11 @@
                 <div class="icon">🚜</div>
                 <div>Танк</div>
                 <div class="price">5 💰</div>
+            </div>
+            <div class="shopItem" id="bombBtn" data-type="bomb" data-cost="20" style="background: #c0392b;">
+                <div class="icon">💣</div>
+                <div>Бомбардиране</div>
+                <div class="price">20 💰</div>
             </div>
         </div>
         
@@ -257,6 +267,16 @@
         // Towers
         let towers = [];
         const towerTypes = {
+            knife: { 
+                cost: 1, 
+                fireRate: 70, 
+                baseDamage: 0.5, 
+                range: 100, 
+                icon: '🔪', 
+                color: '#95a5a6',
+                upgradeCosts: [1, 2],
+                bulletIcon: '🔪'
+            },
             pistol: { 
                 cost: 1, 
                 fireRate: 60, 
@@ -281,13 +301,35 @@
                 baseDamage: 3, 
                 range: 180, 
                 icon: '🚜', 
-                color: '#95a5a6',
+                color: '#34495e',
                 upgradeCosts: [10, 15]
             }
         };
         
         // Currently selected tower for upgrade
         let selectedTowerForUpgrade = null;
+        
+        // Bomb effects
+        let bombEffects = [];
+        
+        // Bombardment function
+        function bombardPath() {
+            // Kill all zombies
+            const zombiesKilled = zombies.length;
+            kills += zombiesKilled;
+            zombies = [];
+            
+            // Create explosion effects along the path
+            for (let i = 0; i < 10; i++) {
+                bombEffects.push({
+                    x: Math.random() * canvas.width,
+                    y: pathY + (Math.random() - 0.5) * 100,
+                    size: 30 + Math.random() * 40,
+                    opacity: 1,
+                    decay: 0.02 + Math.random() * 0.02
+                });
+            }
+        }
         
         // Zombies
         let zombies = [];
@@ -312,6 +354,16 @@
             item.addEventListener('click', () => {
                 const cost = parseInt(item.dataset.cost);
                 const type = item.dataset.type;
+                
+                // Special handling for bomb
+                if (type === 'bomb') {
+                    if (money >= cost) {
+                        money -= cost;
+                        bombardPath();
+                        updateUI();
+                    }
+                    return;
+                }
                 
                 if (money >= cost) {
                     // Deselect others
@@ -451,6 +503,10 @@
                 money -= upgradeCost;
                 selectedTowerForUpgrade.level++;
                 selectedTowerForUpgrade.damage = selectedTowerForUpgrade.baseDamage * selectedTowerForUpgrade.level;
+                
+                // Увеличаване на обсега с всяко ниво (30 пиксела на ниво)
+                const baseRange = towerTypes[selectedTowerForUpgrade.type].range;
+                selectedTowerForUpgrade.range = baseRange + ((selectedTowerForUpgrade.level - 1) * 30);
                 
                 updateUI();
                 showUpgradePanel(selectedTowerForUpgrade, 
@@ -817,10 +873,19 @@
         
         // Draw bullet
         function drawBullet(bullet) {
-            ctx.fillStyle = '#f39c12';
-            ctx.beginPath();
-            ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
-            ctx.fill();
+            if (bullet.icon) {
+                // Draw knife icon
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(bullet.icon, bullet.x, bullet.y);
+            } else {
+                // Draw regular bullet
+                ctx.fillStyle = '#f39c12';
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
         
         // Update game
@@ -956,7 +1021,8 @@
                             vx: Math.cos(angle) * 8,
                             vy: Math.sin(angle) * 8,
                             damage: tower.damage,
-                            target: closestZombie
+                            target: closestZombie,
+                            icon: tower.bulletIcon || null
                         });
                         
                         tower.fireTimer = 0;
@@ -1000,6 +1066,29 @@
             drawPath();
             drawGrid();
             drawCity();
+            
+            // Draw bomb effects
+            bombEffects.forEach((effect, index) => {
+                ctx.fillStyle = `rgba(255, 100, 0, ${effect.opacity})`;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner glow
+                ctx.fillStyle = `rgba(255, 200, 0, ${effect.opacity * 0.7})`;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.size * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Update effect
+                effect.opacity -= effect.decay;
+                effect.size += 2;
+                
+                // Remove finished effects
+                if (effect.opacity <= 0) {
+                    bombEffects.splice(index, 1);
+                }
+            });
             
             towers.forEach(tower => drawTower(tower));
             zombies.forEach(zombie => drawZombie(zombie));
