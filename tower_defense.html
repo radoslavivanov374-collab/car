@@ -42,6 +42,25 @@
         .stat span {
             color: #f1c40f;
         }
+        #waveCounter {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 40px;
+            border-radius: 10px;
+            border: 3px solid #f1c40f;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        #waveCounter .waveText {
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            text-align: center;
+        }
         #shopBar {
             display: flex;
             gap: 10px;
@@ -195,12 +214,14 @@
     </style>
 </head>
 <body>
+    <div id="waveCounter">
+        <div class="waveText">🌊 ВЪЛНА <span id="waveDisplay">1</span> / 10</div>
+    </div>
     <div id="gameContainer">
         <div id="topBar">
             <div class="stat">💰 Монети: <span id="money">5</span></div>
             <div class="stat">🏛️ Живот на града: <span id="cityHealth">20</span></div>
             <div class="stat">💀 Убити: <span id="kills">0</span></div>
-            <div class="stat">🌊 Вълна: <span id="wave">1</span></div>
             <div class="stat">⏱️ Време: <span id="timer">0:00</span></div>
             <button id="pauseBtn" onclick="togglePause()">⏸️ Пауза</button>
         </div>
@@ -587,35 +608,55 @@
             let baseHealth, size, speed, bossType;
             
             if (wave === 1) {
-                // Wave 1: Normal bosses
                 baseHealth = isBoss ? 50 : 8;
                 size = isBoss ? 80 : 40;
                 speed = isBoss ? 0.25 : 0.6;
                 bossType = 'normal';
             } else if (wave === 2) {
-                // Wave 2: Purple bosses with 100 health
                 baseHealth = isBoss ? 100 : 12;
                 size = isBoss ? 90 : 40;
                 speed = isBoss ? 0.3 : 0.7;
                 bossType = 'purple';
             } else if (wave === 3) {
-                // Wave 3: Elite bosses
                 baseHealth = isBoss ? 150 : 15;
                 size = isBoss ? 100 : 40;
                 speed = isBoss ? 0.35 : 0.8;
                 bossType = 'elite';
             } else if (wave === 4) {
-                // Wave 4: Stronger enemies
                 baseHealth = isBoss ? 200 : 20;
                 size = isBoss ? 105 : 40;
                 speed = isBoss ? 0.4 : 0.9;
                 bossType = 'advanced';
-            } else {
-                // Wave 5: Strongest enemies
+            } else if (wave === 5) {
                 baseHealth = isBoss ? 250 : 25;
                 size = isBoss ? 110 : 40;
                 speed = isBoss ? 0.45 : 1.0;
                 bossType = 'supreme';
+            } else if (wave === 6) {
+                baseHealth = isBoss ? 350 : 30;
+                size = isBoss ? 115 : 40;
+                speed = isBoss ? 0.5 : 1.1;
+                bossType = 'final';
+            } else if (wave === 7) {
+                baseHealth = isBoss ? 500 : 35;
+                size = isBoss ? 125 : 40;
+                speed = isBoss ? 0.55 : 1.2;
+                bossType = 'ultra';
+            } else if (wave === 8) {
+                baseHealth = isBoss ? 700 : 40;
+                size = isBoss ? 135 : 40;
+                speed = isBoss ? 0.6 : 1.3;
+                bossType = 'mega';
+            } else if (wave === 9) {
+                baseHealth = isBoss ? 1000 : 45;
+                size = isBoss ? 145 : 40;
+                speed = isBoss ? 0.65 : 1.4;
+                bossType = 'titan';
+            } else {
+                baseHealth = isBoss ? 1500 : 50;
+                size = isBoss ? 160 : 40;
+                speed = isBoss ? 0.7 : 1.5;
+                bossType = 'apocalypse';
             }
             
             zombies.push({
@@ -631,57 +672,40 @@
             });
         }
         
-        // Spawn final boss
-        function spawnFinalBoss() {
-            if (finalBossSpawned) return;
-            finalBossSpawned = true;
-            
-            zombies.push({
-                x: 0,
-                y: pathY,
-                width: 120,
-                height: 120,
-                speed: 0.2,
-                health: 500,
-                maxHealth: 500,
-                isBoss: true,
-                bossType: 'final'
-            });
-        }
+        // Wave boss spawn tracking
+        let waveBossSpawned = [false, false, false, false, false, false, false, false, false, false];
         
-        // Spawn mega boss at 10 minutes
-        function spawnMegaBoss() {
-            if (megaBossSpawned) return;
-            megaBossSpawned = true;
+        // Spawn wave boss
+        function spawnWaveBoss(waveNum) {
+            if (waveBossSpawned[waveNum - 1]) return;
+            waveBossSpawned[waveNum - 1] = true;
+            
+            const bossConfigs = [
+                { type: 'normal', health: 80, size: 85, speed: 0.25, damage: 8 },
+                { type: 'purple', health: 150, size: 95, speed: 0.28, damage: 10 },
+                { type: 'elite', health: 250, size: 105, speed: 0.3, damage: 12 },
+                { type: 'advanced', health: 350, size: 110, speed: 0.32, damage: 14 },
+                { type: 'supreme', health: 500, size: 115, speed: 0.34, damage: 16 },
+                { type: 'final', health: 700, size: 125, speed: 0.36, damage: 18 },
+                { type: 'ultra', health: 1000, size: 135, speed: 0.38, damage: 20 },
+                { type: 'mega', health: 1500, size: 150, speed: 0.4, damage: 22 },
+                { type: 'titan', health: 2500, size: 165, speed: 0.42, damage: 25 },
+                { type: 'apocalypse', health: 4000, size: 180, speed: 0.45, damage: 30 }
+            ];
+            
+            const config = bossConfigs[waveNum - 1];
             
             zombies.push({
                 x: 0,
                 y: pathY,
-                width: 150,
-                height: 150,
-                speed: 0.15,
-                health: 1000,
-                maxHealth: 1000,
+                width: config.size,
+                height: config.size,
+                speed: config.speed,
+                health: config.health,
+                maxHealth: config.health,
                 isBoss: true,
-                bossType: 'mega'
-            });
-        }
-        
-        // Spawn ultra boss at 7 minutes
-        function spawnUltraBoss() {
-            if (ultraBossSpawned) return;
-            ultraBossSpawned = true;
-            
-            zombies.push({
-                x: 0,
-                y: pathY,
-                width: 135,
-                height: 135,
-                speed: 0.18,
-                health: 750,
-                maxHealth: 750,
-                isBoss: true,
-                bossType: 'ultra'
+                bossType: config.type,
+                bossDamage: config.damage
             });
         }
         
@@ -690,7 +714,7 @@
             document.getElementById('money').textContent = money;
             document.getElementById('cityHealth').textContent = cityHealth;
             document.getElementById('kills').textContent = kills;
-            document.getElementById('wave').textContent = wave;
+            document.getElementById('waveDisplay').textContent = wave;
             
             const seconds = Math.floor(gameTime / 60);
             const minutes = Math.floor(seconds / 60);
@@ -799,6 +823,14 @@
                     bodyColor = '#4B0082';
                     headColor = '#6A0DAD';
                     eyeColor = '#FF4500';
+                } else if (zombie.bossType === 'titan') {
+                    bodyColor = '#1C1C1C';
+                    headColor = '#4A4A4A';
+                    eyeColor = '#00FF00';
+                } else if (zombie.bossType === 'apocalypse') {
+                    bodyColor = '#660000';
+                    headColor = '#990000';
+                    eyeColor = '#FFFF00';
                 } else {
                     bodyColor = '#8B0000';
                     headColor = '#DC143C';
@@ -848,9 +880,13 @@
             
             // Boss crown/skull/demon
             if (zombie.isBoss) {
-                ctx.font = (zombie.bossType === 'mega' ? '40' : zombie.bossType === 'ultra' ? '38' : zombie.bossType === 'final' ? '35' : '20') + 'px Arial';
+                ctx.font = (zombie.bossType === 'apocalypse' ? '50' : zombie.bossType === 'titan' ? '45' : zombie.bossType === 'mega' ? '40' : zombie.bossType === 'ultra' ? '38' : zombie.bossType === 'final' ? '35' : '20') + 'px Arial';
                 ctx.textAlign = 'center';
-                if (zombie.bossType === 'mega') {
+                if (zombie.bossType === 'apocalypse') {
+                    ctx.fillText('☠️', zombie.x + zombie.width / 2, zombie.y - 120);
+                } else if (zombie.bossType === 'titan') {
+                    ctx.fillText('⚡', zombie.x + zombie.width / 2, zombie.y - 110);
+                } else if (zombie.bossType === 'mega') {
                     ctx.fillText('👹', zombie.x + zombie.width / 2, zombie.y - 100);
                 } else if (zombie.bossType === 'ultra') {
                     ctx.fillText('🔥', zombie.x + zombie.width / 2, zombie.y - 90);
@@ -875,6 +911,8 @@
             if (zombie.bossType === 'ultra') healthBarColor = '#FFA500';
             if (zombie.bossType === 'advanced') healthBarColor = '#FFD700';
             if (zombie.bossType === 'supreme') healthBarColor = '#00FFFF';
+            if (zombie.bossType === 'titan') healthBarColor = '#00FF00';
+            if (zombie.bossType === 'apocalypse') healthBarColor = '#FFFF00';
             
             ctx.fillStyle = healthBarColor;
             ctx.fillRect(zombie.x, barY, (zombie.health / zombie.maxHealth) * zombie.width, barHeight);
@@ -956,49 +994,60 @@
             // Update game time
             gameTime++;
             
-            // Wave system based on time (60 fps)
+            // Wave system: 10 waves x 2 minutes each = 20 minutes total
             const seconds = Math.floor(gameTime / 60);
             
-            if (seconds < 60) {
-                // Wave 1: 0-60 seconds
+            // Determine current wave (each wave is 120 seconds)
+            if (seconds < 120) {
                 wave = 1;
-                zombieSpawnRate = 120; // Every 2 seconds
-                bossSpawnInterval = 7;
+                zombieSpawnRate = 120;
+                bossSpawnInterval = 8;
+                if (seconds >= 110) spawnWaveBoss(1);
             } else if (seconds < 240) {
-                // Wave 2: 60-240 seconds (4 minutes total)
                 wave = 2;
-                zombieSpawnRate = 80; // Every 1.33 seconds
-                bossSpawnInterval = 5; // More frequent bosses
-            } else if (seconds < 420) {
-                // Wave 3: 240-420 seconds (7 minutes total)
+                zombieSpawnRate = 100;
+                bossSpawnInterval = 7;
+                if (seconds >= 230) spawnWaveBoss(2);
+            } else if (seconds < 360) {
                 wave = 3;
-                zombieSpawnRate = 60; // Every 1 second
-                bossSpawnInterval = 3; // Very frequent bosses
-                
-                // Spawn final boss at 5 minutes (300 seconds)
-                if (seconds >= 300 && !finalBossSpawned) {
-                    spawnFinalBoss();
-                }
-            } else if (seconds < 600) {
-                // Wave 4: 420-600 seconds (10 minutes total)
+                zombieSpawnRate = 80;
+                bossSpawnInterval = 6;
+                if (seconds >= 350) spawnWaveBoss(3);
+            } else if (seconds < 480) {
                 wave = 4;
-                zombieSpawnRate = 45; // Every 0.75 seconds
-                bossSpawnInterval = 2; // Even more frequent
-                
-                // Spawn ultra boss at end of wave 4 (580 seconds)
-                if (seconds >= 580 && !ultraBossSpawned) {
-                    spawnUltraBoss();
-                }
-            } else {
-                // Wave 5: 600+ seconds (after 10 minutes)
+                zombieSpawnRate = 70;
+                bossSpawnInterval = 5;
+                if (seconds >= 470) spawnWaveBoss(4);
+            } else if (seconds < 600) {
                 wave = 5;
-                zombieSpawnRate = 30; // Every 0.5 seconds
-                bossSpawnInterval = 2; // Maximum frequency
-                
-                // Spawn mega boss at end of wave 5 (780 seconds / 13 minutes)
-                if (seconds >= 780 && !megaBossSpawned) {
-                    spawnMegaBoss();
-                }
+                zombieSpawnRate = 60;
+                bossSpawnInterval = 5;
+                if (seconds >= 590) spawnWaveBoss(5);
+            } else if (seconds < 720) {
+                wave = 6;
+                zombieSpawnRate = 50;
+                bossSpawnInterval = 4;
+                if (seconds >= 710) spawnWaveBoss(6);
+            } else if (seconds < 840) {
+                wave = 7;
+                zombieSpawnRate = 45;
+                bossSpawnInterval = 4;
+                if (seconds >= 830) spawnWaveBoss(7);
+            } else if (seconds < 960) {
+                wave = 8;
+                zombieSpawnRate = 40;
+                bossSpawnInterval = 3;
+                if (seconds >= 950) spawnWaveBoss(8);
+            } else if (seconds < 1080) {
+                wave = 9;
+                zombieSpawnRate = 35;
+                bossSpawnInterval = 3;
+                if (seconds >= 1070) spawnWaveBoss(9);
+            } else {
+                wave = 10;
+                zombieSpawnRate = 30;
+                bossSpawnInterval = 2;
+                if (seconds >= 1190) spawnWaveBoss(10);
             }
             
             // Update UI every second
@@ -1029,14 +1078,7 @@
                 if (zombie.x + zombie.width >= city.x) {
                     let damage = 1;
                     if (zombie.isBoss) {
-                        if (zombie.bossType === 'mega') damage = 20;
-                        else if (zombie.bossType === 'ultra') damage = 18;
-                        else if (zombie.bossType === 'final') damage = 20;
-                        else if (zombie.bossType === 'supreme') damage = 17;
-                        else if (zombie.bossType === 'advanced') damage = 16;
-                        else if (zombie.bossType === 'elite') damage = 15;
-                        else if (zombie.bossType === 'purple') damage = 12;
-                        else damage = 10;
+                        damage = zombie.bossDamage || 10;
                     }
                     cityHealth -= damage;
                     zombies.splice(zIndex, 1);
