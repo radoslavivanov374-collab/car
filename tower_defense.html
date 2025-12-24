@@ -171,6 +171,27 @@
         .closeUpgrade:hover {
             background: #c0392b;
         }
+        #pauseBtn {
+            background: #f39c12;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            transition: all 0.3s;
+        }
+        #pauseBtn:hover {
+            background: #e67e22;
+            transform: scale(1.05);
+        }
+        #pauseBtn.paused {
+            background: #27ae60;
+        }
+        #pauseBtn.paused:hover {
+            background: #2ecc71;
+        }
     </style>
 </head>
 <body>
@@ -181,6 +202,7 @@
             <div class="stat">💀 Убити: <span id="kills">0</span></div>
             <div class="stat">🌊 Вълна: <span id="wave">1</span></div>
             <div class="stat">⏱️ Време: <span id="timer">0:00</span></div>
+            <button id="pauseBtn" onclick="togglePause()">⏸️ Пауза</button>
         </div>
         
         <div id="shopBar">
@@ -241,6 +263,7 @@
         let cityHealth = 20;
         let kills = 0;
         let gameRunning = true;
+        let gamePaused = false;
         let selectedTower = null;
         
         // Money generation
@@ -311,6 +334,22 @@
         
         // Bomb effects
         let bombEffects = [];
+        
+        // Toggle pause
+        function togglePause() {
+            if (!gameRunning) return;
+            
+            gamePaused = !gamePaused;
+            const pauseBtn = document.getElementById('pauseBtn');
+            
+            if (gamePaused) {
+                pauseBtn.textContent = '▶️ Продължи';
+                pauseBtn.classList.add('paused');
+            } else {
+                pauseBtn.textContent = '⏸️ Пауза';
+                pauseBtn.classList.remove('paused');
+            }
+        }
         
         // Bombardment function
         function bombardPath() {
@@ -890,7 +929,7 @@
         
         // Update game
         function update() {
-            if (!gameRunning) return;
+            if (!gameRunning || gamePaused) return;
             
             // Update game time
             gameTime++;
@@ -1105,6 +1144,7 @@
         // Restart game
         function restartGame() {
             gameRunning = true;
+            gamePaused = false;
             money = 5;
             cityHealth = 20;
             kills = 0;
@@ -1132,6 +1172,8 @@
             updateUI();
             document.querySelectorAll('.shopItem').forEach(i => i.classList.remove('selected'));
             document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('pauseBtn').textContent = '⏸️ Пауза';
+            document.getElementById('pauseBtn').classList.remove('paused');
             closeUpgradePanel();
             gameLoop();
         }
