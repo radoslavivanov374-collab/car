@@ -211,16 +211,103 @@
         #pauseBtn.paused:hover {
             background: #2ecc71;
         }
+        #startScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        #startButton {
+            font-size: 48px;
+            padding: 30px 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 5px solid #f1c40f;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.5);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #startButton:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 50px rgba(241, 196, 15, 0.8);
+        }
+        #bossHealthDisplay {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px 40px;
+            border-radius: 15px;
+            border: 3px solid #e74c3c;
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+            display: none;
+            z-index: 1500;
+            min-width: 400px;
+        }
+        #bossHealthDisplay .bossIcon {
+            font-size: 50px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        #bossHealthDisplay .bossName {
+            color: #f1c40f;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        #bossHealthDisplay .bossHealthBar {
+            background: #2c3e50;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        #bossHealthDisplay .bossHealthFill {
+            background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+            height: 100%;
+            transition: width 0.3s;
+        }
+        #bossHealthDisplay .bossHealthText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
     </style>
 </head>
 <body>
+    <div id="startScreen">
+        <button id="startButton" onclick="startGame()">▶️ СТАРТ</button>
+    </div>
+    
+    <div id="bossHealthDisplay">
+        <div class="bossIcon" id="bossIcon"></div>
+        <div class="bossName" id="bossName"></div>
+        <div class="bossHealthBar">
+            <div class="bossHealthFill" id="bossHealthFill"></div>
+            <div class="bossHealthText" id="bossHealthText"></div>
+        </div>
+    </div>
+    
     <div id="waveCounter">
         <div class="waveText">🌊 ВЪЛНА <span id="waveDisplay">1</span> / 10</div>
     </div>
     <div id="gameContainer">
         <div id="topBar">
             <div class="stat">💰 Монети: <span id="money">5</span></div>
-            <div class="stat">🏛️ Живот на града: <span id="cityHealth">20</span></div>
+            <div class="stat">🏛️ Живот на града: <span id="cityHealth">400</span></div>
             <div class="stat">💀 Убити: <span id="kills">0</span></div>
             <div class="stat">⏱️ Време: <span id="timer">0:00</span></div>
             <button id="pauseBtn" onclick="togglePause()">⏸️ Пауза</button>
@@ -242,15 +329,30 @@
                 <div>Пушка</div>
                 <div class="price">3 💰</div>
             </div>
-            <div class="shopItem" data-type="tank" data-cost="5">
+            <div class="shopItem" data-type="tank" data-cost="10">
                 <div class="icon">🚜</div>
                 <div>Танк</div>
-                <div class="price">5 💰</div>
+                <div class="price">10 💰</div>
+            </div>
+            <div class="shopItem" data-type="rpg" data-cost="7">
+                <div class="icon">🚀</div>
+                <div>RPG</div>
+                <div class="price">7 💰</div>
             </div>
             <div class="shopItem" data-type="bunker" data-cost="15">
                 <div class="icon">🏰</div>
                 <div>Бункер</div>
                 <div class="price">15 💰</div>
+            </div>
+            <div class="shopItem" data-type="minigun" data-cost="25">
+                <div class="icon">⚡</div>
+                <div>Minigun</div>
+                <div class="price">25 💰</div>
+            </div>
+            <div class="shopItem" data-type="robot" data-cost="50">
+                <div class="icon">🤖</div>
+                <div>Робот</div>
+                <div class="price">50 💰</div>
             </div>
             <div class="shopItem" id="bombBtn" data-type="bomb" data-cost="20" style="background: #c0392b;">
                 <div class="icon">💣</div>
@@ -286,9 +388,10 @@
         
         // Game state
         let money = 5;
-        let cityHealth = 20;
+        let cityHealth = 400;
         let kills = 0;
-        let gameRunning = true;
+        let gameRunning = false;
+        let gameStarted = false;
         let gamePaused = false;
         let selectedTower = null;
         
@@ -345,13 +448,25 @@
                 upgradeCosts: [6, 9]
             },
             tank: { 
-                cost: 5, 
+                cost: 10, 
                 fireRate: 15, 
                 baseDamage: 3, 
                 range: 180, 
                 icon: '🚜', 
                 color: '#34495e',
-                upgradeCosts: [10, 15]
+                upgradeCosts: [20, 30]
+            },
+            rpg: {
+                cost: 7,
+                fireRate: 180,
+                baseDamage: 30,
+                range: 250,
+                icon: '🚀',
+                color: '#e67e22',
+                upgradeCosts: [14, 21],
+                bulletIcon: '💥',
+                isExplosive: true,
+                explosionRadius: 60
             },
             bunker: { 
                 cost: 15, 
@@ -362,6 +477,29 @@
                 color: '#7f8c8d',
                 upgradeCosts: [20, 30],
                 bulletIcon: '🔥'
+            },
+            minigun: {
+                cost: 25,
+                fireRate: 3,
+                baseDamage: 0.8,
+                range: 160,
+                icon: '⚡',
+                color: '#95a5a6',
+                upgradeCosts: [50, 75],
+                bulletIcon: '•'
+            },
+            robot: {
+                cost: 50,
+                fireRate: 30,
+                baseDamage: 25,
+                range: 220,
+                icon: '🤖',
+                color: '#3498db',
+                upgradeCosts: [100, 150],
+                bulletIcon: '⚡',
+                isExplosive: true,
+                explosionRadius: 50,
+                dualMode: true
             }
         };
         
@@ -370,10 +508,21 @@
         
         // Bomb effects
         let bombEffects = [];
+        let explosionEffects = [];
+        
+        // Boss tracking
+        let currentBoss = null;
+        
+        // Start game function
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            gameRunning = true;
+            gameStarted = true;
+        }
         
         // Toggle pause
         function togglePause() {
-            if (!gameRunning) return;
+            if (!gameRunning || !gameStarted) return;
             
             gamePaused = !gamePaused;
             const pauseBtn = document.getElementById('pauseBtn');
@@ -681,21 +830,21 @@
             waveBossSpawned[waveNum - 1] = true;
             
             const bossConfigs = [
-                { type: 'normal', health: 80, size: 85, speed: 0.25, damage: 8 },
-                { type: 'purple', health: 150, size: 95, speed: 0.28, damage: 10 },
-                { type: 'elite', health: 250, size: 105, speed: 0.3, damage: 12 },
-                { type: 'advanced', health: 350, size: 110, speed: 0.32, damage: 14 },
-                { type: 'supreme', health: 500, size: 115, speed: 0.34, damage: 16 },
-                { type: 'final', health: 700, size: 125, speed: 0.36, damage: 18 },
-                { type: 'ultra', health: 1000, size: 135, speed: 0.38, damage: 20 },
-                { type: 'mega', health: 1500, size: 150, speed: 0.4, damage: 22 },
-                { type: 'titan', health: 2500, size: 165, speed: 0.42, damage: 25 },
-                { type: 'apocalypse', health: 4000, size: 180, speed: 0.45, damage: 30 }
+                { type: 'normal', health: 1000, size: 85, speed: 0.25, damage: 8, name: 'Normal Boss' },
+                { type: 'purple', health: 2000, size: 95, speed: 0.28, damage: 10, name: 'Purple Boss' },
+                { type: 'elite', health: 3000, size: 105, speed: 0.3, damage: 12, name: 'Elite Boss' },
+                { type: 'advanced', health: 4000, size: 110, speed: 0.32, damage: 14, name: 'Advanced Boss' },
+                { type: 'supreme', health: 5000, size: 115, speed: 0.34, damage: 16, name: 'Supreme Boss' },
+                { type: 'final', health: 6000, size: 125, speed: 0.36, damage: 18, name: 'Final Boss' },
+                { type: 'ultra', health: 7000, size: 135, speed: 0.38, damage: 20, name: 'Ultra Boss' },
+                { type: 'mega', health: 8000, size: 150, speed: 0.4, damage: 22, name: 'Mega Boss' },
+                { type: 'titan', health: 9000, size: 165, speed: 0.42, damage: 25, name: 'Titan Boss' },
+                { type: 'apocalypse', health: 10000, size: 180, speed: 0.45, damage: 30, name: 'Apocalypse Boss' }
             ];
             
             const config = bossConfigs[waveNum - 1];
             
-            zombies.push({
+            const boss = {
                 x: 0,
                 y: pathY,
                 width: config.size,
@@ -705,8 +854,50 @@
                 maxHealth: config.health,
                 isBoss: true,
                 bossType: config.type,
-                bossDamage: config.damage
-            });
+                bossDamage: config.damage,
+                bossName: config.name
+            };
+            
+            zombies.push(boss);
+            currentBoss = boss;
+            showBossHealth(boss);
+        }
+        
+        // Show boss health display
+        function showBossHealth(boss) {
+            const display = document.getElementById('bossHealthDisplay');
+            const icon = document.getElementById('bossIcon');
+            const name = document.getElementById('bossName');
+            
+            const iconMap = {
+                'normal': '👑',
+                'purple': '👑',
+                'elite': '👑',
+                'advanced': '👑',
+                'supreme': '👑',
+                'final': '💀',
+                'ultra': '🔥',
+                'mega': '👹',
+                'titan': '⚡',
+                'apocalypse': '☠️'
+            };
+            
+            icon.textContent = iconMap[boss.bossType] || '👑';
+            name.textContent = boss.bossName || 'Boss';
+            display.style.display = 'block';
+        }
+        
+        // Update boss health display
+        function updateBossHealth() {
+            if (!currentBoss || !zombies.includes(currentBoss)) {
+                document.getElementById('bossHealthDisplay').style.display = 'none';
+                currentBoss = null;
+                return;
+            }
+            
+            const healthPercent = (currentBoss.health / currentBoss.maxHealth) * 100;
+            document.getElementById('bossHealthFill').style.width = healthPercent + '%';
+            document.getElementById('bossHealthText').textContent = Math.ceil(currentBoss.health) + ' / ' + currentBoss.maxHealth;
         }
         
         // Update UI
@@ -768,26 +959,80 @@
         
         // Draw city
         function drawCity() {
-            // Building
-            ctx.fillStyle = '#e74c3c';
-            ctx.fillRect(city.x, city.y - 40, city.width, city.height);
+            const buildings = [
+                { x: city.x, y: city.y - 50, w: 80, h: 90, color: '#8B4513' },
+                { x: city.x + 20, y: city.y - 70, w: 50, h: 110, color: '#A0522D' },
+                { x: city.x + 50, y: city.y - 45, w: 40, h: 85, color: '#CD853F' }
+            ];
             
-            // Windows
-            ctx.fillStyle = '#f39c12';
-            for (let i = 0; i < 3; i++) {
-                for (let j = 0; j < 3; j++) {
-                    ctx.fillRect(city.x + 10 + i * 20, city.y - 30 + j * 20, 10, 10);
+            buildings.forEach(building => {
+                // Building body
+                ctx.fillStyle = building.color;
+                ctx.fillRect(building.x, building.y, building.w, building.h);
+                
+                // Building outline
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(building.x, building.y, building.w, building.h);
+                
+                // Windows
+                ctx.fillStyle = '#FFD700';
+                const windowRows = Math.floor(building.h / 20);
+                const windowCols = Math.floor(building.w / 20);
+                for (let row = 0; row < windowRows; row++) {
+                    for (let col = 0; col < windowCols; col++) {
+                        if (Math.random() > 0.3) {
+                            ctx.fillRect(
+                                building.x + 5 + col * 20,
+                                building.y + 5 + row * 20,
+                                10, 12
+                            );
+                        }
+                    }
                 }
-            }
+            });
             
-            // Flag
+            // Flag on tallest building
             ctx.fillStyle = '#2ecc71';
-            ctx.fillRect(city.x + 35, city.y - 60, 10, 20);
+            ctx.fillRect(city.x + 43, city.y - 90, 4, 20);
             ctx.beginPath();
-            ctx.moveTo(city.x + 45, city.y - 60);
-            ctx.lineTo(city.x + 65, city.y - 50);
-            ctx.lineTo(city.x + 45, city.y - 40);
+            ctx.moveTo(city.x + 47, city.y - 90);
+            ctx.lineTo(city.x + 67, city.y - 80);
+            ctx.lineTo(city.x + 47, city.y - 70);
             ctx.fill();
+            
+            // City health bar above city
+            const barWidth = 100;
+            const barHeight = 15;
+            const barX = city.x - 5;
+            const barY = city.y - 110;
+            
+            // Bar background
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+            
+            // Health fill
+            const healthPercent = cityHealth / 400;
+            let healthColor = '#2ecc71';
+            if (healthPercent < 0.3) healthColor = '#e74c3c';
+            else if (healthPercent < 0.6) healthColor = '#f39c12';
+            
+            ctx.fillStyle = healthColor;
+            ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+            
+            // Bar border
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
+            
+            // Health text
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.strokeText(cityHealth + ' / 400', barX + barWidth / 2, barY + barHeight / 2 + 4);
+            ctx.fillText(cityHealth + ' / 400', barX + barWidth / 2, barY + barHeight / 2 + 4);
         }
         
         // Draw zombie
@@ -1125,7 +1370,9 @@
                             vy: Math.sin(angle) * 8,
                             damage: tower.damage,
                             target: closestZombie,
-                            icon: tower.bulletIcon || null
+                            icon: tower.bulletIcon || null,
+                            isExplosive: tower.isExplosive || false,
+                            explosionRadius: tower.explosionRadius || 0
                         });
                         
                         tower.fireTimer = 0;
@@ -1143,14 +1390,40 @@
                     if (bullet.x > zombie.x && bullet.x < zombie.x + zombie.width &&
                         bullet.y > zombie.y - 20 && bullet.y < zombie.y + 20) {
                         
-                        zombie.health -= bullet.damage;
-                        bullets.splice(bIndex, 1);
-                        
-                        if (zombie.health <= 0) {
-                            zombies.splice(zIndex, 1);
-                            kills++;
-                            updateUI();
+                        // Handle explosion
+                        if (bullet.isExplosive) {
+                            // Create explosion effect
+                            explosionEffects.push({
+                                x: bullet.x,
+                                y: bullet.y,
+                                radius: 0,
+                                maxRadius: bullet.explosionRadius,
+                                opacity: 1
+                            });
+                            
+                            // Damage all zombies in radius
+                            zombies.forEach((z, zi) => {
+                                const dist = Math.hypot(z.x + z.width / 2 - bullet.x, z.y - bullet.y);
+                                if (dist < bullet.explosionRadius) {
+                                    z.health -= bullet.damage;
+                                    if (z.health <= 0) {
+                                        zombies.splice(zi, 1);
+                                        kills++;
+                                        money += z.isBoss ? 10 : 1;
+                                    }
+                                }
+                            });
+                        } else {
+                            zombie.health -= bullet.damage;
+                            if (zombie.health <= 0) {
+                                zombies.splice(zIndex, 1);
+                                kills++;
+                                money += zombie.isBoss ? 10 : 1;
+                            }
                         }
+                        
+                        bullets.splice(bIndex, 1);
+                        updateUI();
                     }
                 });
                 
@@ -1160,6 +1433,9 @@
                     bullets.splice(bIndex, 1);
                 }
             });
+            
+            // Update boss health display
+            updateBossHealth();
         }
         
         // Draw game
@@ -1193,6 +1469,26 @@
                 }
             });
             
+            // Draw explosion effects
+            explosionEffects.forEach((effect, index) => {
+                ctx.fillStyle = `rgba(255, 150, 0, ${effect.opacity})`;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = `rgba(255, 255, 0, ${effect.opacity * 0.6})`;
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.radius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                effect.radius += 3;
+                effect.opacity -= 0.05;
+                
+                if (effect.opacity <= 0 || effect.radius >= effect.maxRadius) {
+                    explosionEffects.splice(index, 1);
+                }
+            });
+            
             towers.forEach(tower => drawTower(tower));
             zombies.forEach(zombie => drawZombie(zombie));
             bullets.forEach(bullet => drawBullet(bullet));
@@ -1207,45 +1503,46 @@
         
         // Restart game
         function restartGame() {
-            gameRunning = true;
-            gamePaused = false;
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('bossHealthDisplay').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'flex';
+            
             money = 5;
-            cityHealth = 20;
+            cityHealth = 400;
             kills = 0;
-            wave = 1;
-            bossSpawnCounter = 0;
-            gameTime = 0;
-            finalBossSpawned = false;
-            megaBossSpawned = false;
-            ultraBossSpawned = false;
-            zombieSpawnRate = 120;
-            bossSpawnInterval = 7;
+            gameRunning = false;
+            gameStarted = false;
+            gamePaused = false;
             towers = [];
             zombies = [];
             bullets = [];
-            zombieSpawnTimer = 0;
-            moneyTimer = 0;
+            bombEffects = [];
+            explosionEffects = [];
             selectedTower = null;
             selectedTowerForUpgrade = null;
+            zombieSpawnTimer = 0;
+            gameTime = 0;
+            wave = 1;
+            bossSpawnCounter = 0;
+            currentBoss = null;
+            waveBossSpawned = [false, false, false, false, false, false, false, false, false, false];
             
             // Reset grid
             grid.forEach(cell => {
-                if (!cell.isPath) cell.occupied = false;
+                if (!cell.isPath) {
+                    cell.occupied = false;
+                }
             });
             
             updateUI();
             document.querySelectorAll('.shopItem').forEach(i => i.classList.remove('selected'));
-            document.getElementById('gameOver').style.display = 'none';
             document.getElementById('pauseBtn').textContent = '⏸️ Пауза';
             document.getElementById('pauseBtn').classList.remove('paused');
             closeUpgradePanel();
-            gameLoop();
         }
         
         // Game loop
         function gameLoop() {
-            if (!gameRunning) return;
-            
             update();
             draw();
             requestAnimationFrame(gameLoop);
@@ -1254,6 +1551,9 @@
         // Start game
         updateUI();
         gameLoop();
+    </script>
+</body>
+</html>
     </script>
 </body>
 </html>
