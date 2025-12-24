@@ -368,10 +368,17 @@
         
         // Bombardment function
         function bombardPath() {
-            // Kill all zombies
-            const zombiesKilled = zombies.length;
-            kills += zombiesKilled;
-            zombies = [];
+            // Deal 1000 damage to all zombies
+            for (let i = zombies.length - 1; i >= 0; i--) {
+                const zombie = zombies[i];
+                zombie.health -= 1000;
+                if (zombie.health <= 0) {
+                    zombies.splice(i, 1);
+                    kills++;
+                    // Award money for kill
+                    money += zombie.isBoss ? 10 : 1;
+                }
+            }
             
             // Create explosion effects along the path
             for (let i = 0; i < 10; i++) {
@@ -978,8 +985,8 @@
                 zombieSpawnRate = 45; // Every 0.75 seconds
                 bossSpawnInterval = 2; // Even more frequent
                 
-                // Spawn ultra boss at 7 minutes (420 seconds)
-                if (seconds >= 420 && !ultraBossSpawned) {
+                // Spawn ultra boss at end of wave 4 (580 seconds)
+                if (seconds >= 580 && !ultraBossSpawned) {
                     spawnUltraBoss();
                 }
             } else {
@@ -988,8 +995,8 @@
                 zombieSpawnRate = 30; // Every 0.5 seconds
                 bossSpawnInterval = 2; // Maximum frequency
                 
-                // Spawn mega boss at 10 minutes (600 seconds)
-                if (seconds >= 600 && !megaBossSpawned) {
+                // Spawn mega boss at end of wave 5 (780 seconds / 13 minutes)
+                if (seconds >= 780 && !megaBossSpawned) {
                     spawnMegaBoss();
                 }
             }
