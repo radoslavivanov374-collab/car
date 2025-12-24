@@ -1321,10 +1321,8 @@
                 
                 // Check if reached city
                 if (zombie.x + zombie.width >= city.x) {
-                    let damage = 1;
-                    if (zombie.isBoss) {
-                        damage = zombie.bossDamage || 10;
-                    }
+                    // Each zombie/boss deals damage equal to its max health
+                    let damage = zombie.maxHealth;
                     cityHealth -= damage;
                     zombies.splice(zIndex, 1);
                     updateUI();
