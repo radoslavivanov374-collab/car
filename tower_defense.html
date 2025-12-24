@@ -122,6 +122,55 @@
         button:hover {
             background: #2ecc71;
         }
+        #upgradePanel {
+            position: absolute;
+            background: rgba(44, 62, 80, 0.95);
+            border: 3px solid #f1c40f;
+            border-radius: 10px;
+            padding: 15px;
+            display: none;
+            z-index: 100;
+            color: white;
+            min-width: 200px;
+        }
+        #upgradePanel h3 {
+            margin: 0 0 10px 0;
+            color: #f1c40f;
+            text-align: center;
+        }
+        .upgradeBtn {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: #27ae60;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .upgradeBtn:hover {
+            background: #2ecc71;
+        }
+        .upgradeBtn:disabled {
+            background: #7f8c8d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .towerInfo {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .closeUpgrade {
+            background: #e74c3c;
+            padding: 5px;
+            font-size: 14px;
+        }
+        .closeUpgrade:hover {
+            background: #c0392b;
+        }
     </style>
 </head>
 <body>
@@ -162,6 +211,17 @@
         <button onclick="restartGame()">Играй отново</button>
     </div>
 
+    <div id="upgradePanel">
+        <h3>⬆️ Ъпгрейд</h3>
+        <div class="towerInfo">
+            <div id="towerIcon" style="font-size: 40px;"></div>
+            <div id="towerLevel"></div>
+            <div id="towerDamage"></div>
+        </div>
+        <button class="upgradeBtn" id="upgradeBtn" onclick="upgradeTower()"></button>
+        <button class="upgradeBtn closeUpgrade" onclick="closeUpgradePanel()">❌ Затвори</button>
+    </div>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -197,10 +257,37 @@
         // Towers
         let towers = [];
         const towerTypes = {
-            pistol: { cost: 1, fireRate: 60, damage: 1, range: 120, icon: '🔫', color: '#3498db' },
-            rifle: { cost: 3, fireRate: 30, damage: 2, range: 150, icon: '🎯', color: '#e67e22' },
-            tank: { cost: 5, fireRate: 15, damage: 3, range: 180, icon: '🚜', color: '#95a5a6' }
+            pistol: { 
+                cost: 1, 
+                fireRate: 60, 
+                baseDamage: 1, 
+                range: 120, 
+                icon: '🔫', 
+                color: '#3498db',
+                upgradeCosts: [2, 3]
+            },
+            rifle: { 
+                cost: 3, 
+                fireRate: 30, 
+                baseDamage: 2, 
+                range: 150, 
+                icon: '🎯', 
+                color: '#e67e22',
+                upgradeCosts: [6, 9]
+            },
+            tank: { 
+                cost: 5, 
+                fireRate: 15, 
+                baseDamage: 3, 
+                range: 180, 
+                icon: '🚜', 
+                color: '#95a5a6',
+                upgradeCosts: [10, 15]
+            }
         };
+        
+        // Currently selected tower for upgrade
+        let selectedTowerForUpgrade = null;
         
         // Zombies
         let zombies = [];
@@ -240,13 +327,29 @@
             });
         });
         
-        // Canvas click - place tower
+        // Canvas click - place tower or select for upgrade
         canvas.addEventListener('click', (e) => {
-            if (!selectedTower || !gameRunning) return;
-            
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
+            
+            // Check if clicking on existing tower for upgrade
+            if (!selectedTower && gameRunning) {
+                let clickedTower = null;
+                towers.forEach(tower => {
+                    const dist = Math.hypot(x - tower.x, y - tower.y);
+                    if (dist < 25) {
+                        clickedTower = tower;
+                    }
+                });
+                
+                if (clickedTower) {
+                    showUpgradePanel(clickedTower, e.clientX, e.clientY);
+                    return;
+                }
+            }
+            
+            if (!selectedTower || !gameRunning) return;
             
             // Find grid cell
             const gridX = Math.floor(x / gridSize) * gridSize;
@@ -268,6 +371,8 @@
                         fireTimer: 0,
                         gridX: gridX,
                         gridY: gridY,
+                        level: 1,
+                        damage: towerType.baseDamage,
                         ...towerType
                     });
                     
@@ -302,6 +407,58 @@
                 }
             });
         });
+        
+        // Show upgrade panel
+        function showUpgradePanel(tower, mouseX, mouseY) {
+            selectedTowerForUpgrade = tower;
+            const panel = document.getElementById('upgradePanel');
+            
+            // Position panel near mouse
+            panel.style.left = mouseX + 'px';
+            panel.style.top = mouseY + 'px';
+            panel.style.display = 'block';
+            
+            // Update panel content
+            document.getElementById('towerIcon').textContent = tower.icon;
+            document.getElementById('towerLevel').textContent = '📊 Ниво: ' + tower.level + '/3';
+            document.getElementById('towerDamage').textContent = '⚔️ Damage: ' + tower.damage;
+            
+            const upgradeBtn = document.getElementById('upgradeBtn');
+            
+            if (tower.level >= 3) {
+                upgradeBtn.textContent = '✅ Макс ниво';
+                upgradeBtn.disabled = true;
+            } else {
+                const upgradeCost = tower.upgradeCosts[tower.level - 1];
+                upgradeBtn.textContent = '⬆️ Ниво ' + (tower.level + 1) + ' (' + upgradeCost + ' 💰)';
+                upgradeBtn.disabled = money < upgradeCost;
+            }
+        }
+        
+        // Close upgrade panel
+        function closeUpgradePanel() {
+            document.getElementById('upgradePanel').style.display = 'none';
+            selectedTowerForUpgrade = null;
+        }
+        
+        // Upgrade tower
+        function upgradeTower() {
+            if (!selectedTowerForUpgrade || selectedTowerForUpgrade.level >= 3) return;
+            
+            const upgradeCost = selectedTowerForUpgrade.upgradeCosts[selectedTowerForUpgrade.level - 1];
+            
+            if (money >= upgradeCost) {
+                money -= upgradeCost;
+                selectedTowerForUpgrade.level++;
+                selectedTowerForUpgrade.damage = selectedTowerForUpgrade.baseDamage * selectedTowerForUpgrade.level;
+                
+                updateUI();
+                showUpgradePanel(selectedTowerForUpgrade, 
+                    parseInt(document.getElementById('upgradePanel').style.left),
+                    parseInt(document.getElementById('upgradePanel').style.top)
+                );
+            }
+        }
         
         // Spawn zombie
         function spawnZombie() {
@@ -626,15 +783,36 @@
             ctx.fill();
             ctx.stroke();
             
-            // Tower base
+            // Tower base - size based on level
+            const baseSize = 35 + (tower.level * 5);
             ctx.fillStyle = tower.color;
-            ctx.fillRect(tower.x - 20, tower.y - 20, 40, 40);
+            ctx.fillRect(tower.x - baseSize/2, tower.y - baseSize/2, baseSize, baseSize);
+            
+            // Level border
+            if (tower.level === 2) {
+                ctx.strokeStyle = '#3498db';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(tower.x - baseSize/2, tower.y - baseSize/2, baseSize, baseSize);
+            } else if (tower.level === 3) {
+                ctx.strokeStyle = '#f1c40f';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(tower.x - baseSize/2, tower.y - baseSize/2, baseSize, baseSize);
+            }
             
             // Tower icon
-            ctx.font = '30px Arial';
+            ctx.font = (25 + tower.level * 5) + 'px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(tower.icon, tower.x, tower.y);
+            
+            // Level indicator
+            ctx.font = 'bold 12px Arial';
+            ctx.fillStyle = '#f1c40f';
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            const levelText = 'Lv' + tower.level;
+            ctx.strokeText(levelText, tower.x, tower.y - baseSize/2 - 8);
+            ctx.fillText(levelText, tower.x, tower.y - baseSize/2 - 8);
         }
         
         // Draw bullet
@@ -855,6 +1033,7 @@
             zombieSpawnTimer = 0;
             moneyTimer = 0;
             selectedTower = null;
+            selectedTowerForUpgrade = null;
             
             // Reset grid
             grid.forEach(cell => {
@@ -864,6 +1043,7 @@
             updateUI();
             document.querySelectorAll('.shopItem').forEach(i => i.classList.remove('selected'));
             document.getElementById('gameOver').style.display = 'none';
+            closeUpgradePanel();
             gameLoop();
         }
         
