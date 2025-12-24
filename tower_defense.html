@@ -226,6 +226,11 @@
                 <div>Танк</div>
                 <div class="price">5 💰</div>
             </div>
+            <div class="shopItem" data-type="bunker" data-cost="15">
+                <div class="icon">🏰</div>
+                <div>Бункер</div>
+                <div class="price">15 💰</div>
+            </div>
             <div class="shopItem" id="bombBtn" data-type="bomb" data-cost="20" style="background: #c0392b;">
                 <div class="icon">💣</div>
                 <div>Бомбардиране</div>
@@ -326,6 +331,16 @@
                 icon: '🚜', 
                 color: '#34495e',
                 upgradeCosts: [10, 15]
+            },
+            bunker: { 
+                cost: 15, 
+                fireRate: 8, 
+                baseDamage: 2.5, 
+                range: 200, 
+                icon: '🏰', 
+                color: '#7f8c8d',
+                upgradeCosts: [20, 30],
+                bulletIcon: '🔥'
             }
         };
         
@@ -913,8 +928,8 @@
         // Draw bullet
         function drawBullet(bullet) {
             if (bullet.icon) {
-                // Draw knife icon
-                ctx.font = '20px Arial';
+                // Draw special icon (knife or fire)
+                ctx.font = bullet.icon === '🔥' ? '16px Arial' : '20px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(bullet.icon, bullet.x, bullet.y);
