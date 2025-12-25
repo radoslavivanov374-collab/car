@@ -490,16 +490,17 @@
             },
             robot: {
                 cost: 50,
-                fireRate: 30,
-                baseDamage: 25,
+                fireRate: 3,
+                baseDamage: 0.8,
                 range: 220,
                 icon: '🤖',
                 color: '#3498db',
                 upgradeCosts: [100, 150],
-                bulletIcon: '⚡',
-                isExplosive: true,
-                explosionRadius: 50,
-                dualMode: true
+                bulletIcon: '•',
+                dualMode: true,
+                rpgFireRate: 180,
+                rpgDamage: 30,
+                rpgExplosionRadius: 60
             }
         };
         
@@ -652,6 +653,7 @@
                         y: gridY + gridSize / 2,
                         type: selectedTower,
                         fireTimer: 0,
+                        rpgFireTimer: 0,
                         gridX: gridX,
                         gridY: gridY,
                         level: 1,
@@ -1336,6 +1338,7 @@
             // Update towers
             towers.forEach(tower => {
                 tower.fireTimer++;
+                if (tower.dualMode) tower.rpgFireTimer++;
                 
                 if (tower.fireTimer >= tower.fireRate) {
                     // Find closest zombie in range
@@ -1374,6 +1377,45 @@
                         });
                         
                         tower.fireTimer = 0;
+                    }
+                }
+                
+                // Robot dual mode - RPG shots
+                if (tower.dualMode && tower.rpgFireTimer >= tower.rpgFireRate) {
+                    let closestZombie = null;
+                    let closestDist = Infinity;
+                    
+                    zombies.forEach(zombie => {
+                        const dist = Math.hypot(
+                            zombie.x + zombie.width / 2 - tower.x,
+                            zombie.y - tower.y
+                        );
+                        
+                        if (dist < tower.range && dist < closestDist) {
+                            closestZombie = zombie;
+                            closestDist = dist;
+                        }
+                    });
+                    
+                    if (closestZombie) {
+                        const angle = Math.atan2(
+                            closestZombie.y - tower.y,
+                            closestZombie.x + closestZombie.width / 2 - tower.x
+                        );
+                        
+                        bullets.push({
+                            x: tower.x,
+                            y: tower.y,
+                            vx: Math.cos(angle) * 8,
+                            vy: Math.sin(angle) * 8,
+                            damage: tower.rpgDamage * tower.level,
+                            target: closestZombie,
+                            icon: '💥',
+                            isExplosive: true,
+                            explosionRadius: tower.rpgExplosionRadius
+                        });
+                        
+                        tower.rpgFireTimer = 0;
                     }
                 }
             });
