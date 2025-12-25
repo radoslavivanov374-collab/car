@@ -313,6 +313,10 @@
             <button id="pauseBtn" onclick="togglePause()">⏸️ Пауза</button>
         </div>
         
+        <div style="text-align: center; font-size: 24px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+            ⛏️ UNITS ⛏️
+        </div>
+        
         <div id="shopBar">
             <div class="shopItem" data-type="rifle" data-cost="6">
                 <div class="icon">🎯</div>
@@ -417,7 +421,7 @@
             rifle: { 
                 cost: 6, 
                 fireRate: 30, 
-                baseDamage: 4, 
+                baseDamage: 8, 
                 range: 150, 
                 icon: '🎯', 
                 color: '#e67e22',
@@ -426,7 +430,7 @@
             tank: { 
                 cost: 20, 
                 fireRate: 15, 
-                baseDamage: 6, 
+                baseDamage: 12, 
                 range: 180, 
                 icon: '🚜', 
                 color: '#34495e',
@@ -435,7 +439,7 @@
             rpg: {
                 cost: 14,
                 fireRate: 180,
-                baseDamage: 60,
+                baseDamage: 120,
                 range: 250,
                 icon: '🚀',
                 color: '#e67e22',
@@ -447,7 +451,7 @@
             bunker: { 
                 cost: 30, 
                 fireRate: 8, 
-                baseDamage: 5, 
+                baseDamage: 10, 
                 range: 200, 
                 icon: '🏰', 
                 color: '#7f8c8d',
@@ -457,7 +461,7 @@
             minigun: {
                 cost: 50,
                 fireRate: 3,
-                baseDamage: 1.6,
+                baseDamage: 3.2,
                 range: 160,
                 icon: '⚡',
                 color: '#95a5a6',
@@ -467,7 +471,7 @@
             robot: {
                 cost: 100,
                 fireRate: 3,
-                baseDamage: 1.6,
+                baseDamage: 3.2,
                 range: 220,
                 icon: '🤖',
                 color: '#3498db',
@@ -475,13 +479,13 @@
                 bulletIcon: '•',
                 dualMode: true,
                 rpgFireRate: 180,
-                rpgDamage: 60,
+                rpgDamage: 120,
                 rpgExplosionRadius: 60
             },
             artillery: {
                 cost: 60,
                 fireRate: 100,
-                baseDamage: 80,
+                baseDamage: 160,
                 range: 300,
                 icon: '💥',
                 color: '#8B4513',
@@ -745,57 +749,60 @@
             const isBoss = bossSpawnCounter >= bossSpawnInterval;
             if (isBoss) bossSpawnCounter = 0;
             
+            // 20% шанс за runner зомби
+            const isRunner = !isBoss && Math.random() < 0.2;
+            
             let baseHealth, size, speed, bossType;
             
             if (wave === 1) {
-                baseHealth = isBoss ? 100 : 16;
-                size = isBoss ? 80 : 40;
-                speed = isBoss ? 0.25 : 0.6;
+                baseHealth = isBoss ? 100 : (isRunner ? 8 : 16);
+                size = isBoss ? 80 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.25 : (isRunner ? 1.8 : 0.6);
                 bossType = 'normal';
             } else if (wave === 2) {
-                baseHealth = isBoss ? 200 : 24;
-                size = isBoss ? 90 : 40;
-                speed = isBoss ? 0.3 : 0.7;
+                baseHealth = isBoss ? 200 : (isRunner ? 12 : 24);
+                size = isBoss ? 90 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.3 : (isRunner ? 2.0 : 0.7);
                 bossType = 'purple';
             } else if (wave === 3) {
-                baseHealth = isBoss ? 300 : 30;
-                size = isBoss ? 100 : 40;
-                speed = isBoss ? 0.35 : 0.8;
+                baseHealth = isBoss ? 300 : (isRunner ? 15 : 30);
+                size = isBoss ? 100 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.35 : (isRunner ? 2.2 : 0.8);
                 bossType = 'elite';
             } else if (wave === 4) {
-                baseHealth = isBoss ? 400 : 40;
-                size = isBoss ? 105 : 40;
-                speed = isBoss ? 0.4 : 0.9;
+                baseHealth = isBoss ? 400 : (isRunner ? 20 : 40);
+                size = isBoss ? 105 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.4 : (isRunner ? 2.4 : 0.9);
                 bossType = 'advanced';
             } else if (wave === 5) {
-                baseHealth = isBoss ? 500 : 50;
-                size = isBoss ? 110 : 40;
-                speed = isBoss ? 0.45 : 1.0;
+                baseHealth = isBoss ? 500 : (isRunner ? 25 : 50);
+                size = isBoss ? 110 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.45 : (isRunner ? 2.6 : 1.0);
                 bossType = 'supreme';
             } else if (wave === 6) {
-                baseHealth = isBoss ? 700 : 60;
-                size = isBoss ? 115 : 40;
-                speed = isBoss ? 0.5 : 1.1;
+                baseHealth = isBoss ? 700 : (isRunner ? 30 : 60);
+                size = isBoss ? 115 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.5 : (isRunner ? 2.8 : 1.1);
                 bossType = 'final';
             } else if (wave === 7) {
-                baseHealth = isBoss ? 1000 : 70;
-                size = isBoss ? 125 : 40;
-                speed = isBoss ? 0.55 : 1.2;
+                baseHealth = isBoss ? 1000 : (isRunner ? 35 : 70);
+                size = isBoss ? 125 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.55 : (isRunner ? 3.0 : 1.2);
                 bossType = 'ultra';
             } else if (wave === 8) {
-                baseHealth = isBoss ? 1400 : 80;
-                size = isBoss ? 135 : 40;
-                speed = isBoss ? 0.6 : 1.3;
+                baseHealth = isBoss ? 1400 : (isRunner ? 40 : 80);
+                size = isBoss ? 135 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.6 : (isRunner ? 3.2 : 1.3);
                 bossType = 'mega';
             } else if (wave === 9) {
-                baseHealth = isBoss ? 2000 : 90;
-                size = isBoss ? 145 : 40;
-                speed = isBoss ? 0.65 : 1.4;
+                baseHealth = isBoss ? 2000 : (isRunner ? 45 : 90);
+                size = isBoss ? 145 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.65 : (isRunner ? 3.4 : 1.4);
                 bossType = 'titan';
             } else {
-                baseHealth = isBoss ? 3000 : 100;
-                size = isBoss ? 160 : 40;
-                speed = isBoss ? 0.7 : 1.5;
+                baseHealth = isBoss ? 3000 : (isRunner ? 50 : 100);
+                size = isBoss ? 160 : (isRunner ? 30 : 40);
+                speed = isBoss ? 0.7 : (isRunner ? 3.6 : 1.5);
                 bossType = 'apocalypse';
             }
             
@@ -808,7 +815,8 @@
                 health: baseHealth,
                 maxHealth: baseHealth,
                 isBoss: isBoss,
-                bossType: bossType
+                bossType: bossType,
+                isRunner: isRunner
             });
         }
         
@@ -821,16 +829,16 @@
             waveBossSpawned[waveNum - 1] = true;
             
             const bossConfigs = [
-                { type: 'normal', health: 1000, size: 85, speed: 0.25, damage: 8, name: 'Normal Boss' },
-                { type: 'purple', health: 2000, size: 95, speed: 0.28, damage: 10, name: 'Purple Boss' },
-                { type: 'elite', health: 3000, size: 105, speed: 0.3, damage: 12, name: 'Elite Boss' },
-                { type: 'advanced', health: 4000, size: 110, speed: 0.32, damage: 14, name: 'Advanced Boss' },
-                { type: 'supreme', health: 5000, size: 115, speed: 0.34, damage: 16, name: 'Supreme Boss' },
-                { type: 'final', health: 6000, size: 125, speed: 0.36, damage: 18, name: 'Final Boss' },
-                { type: 'ultra', health: 7000, size: 135, speed: 0.38, damage: 20, name: 'Ultra Boss' },
-                { type: 'mega', health: 8000, size: 150, speed: 0.4, damage: 22, name: 'Mega Boss' },
-                { type: 'titan', health: 9000, size: 165, speed: 0.42, damage: 25, name: 'Titan Boss' },
-                { type: 'apocalypse', health: 10000, size: 180, speed: 0.45, damage: 30, name: 'Apocalypse Boss' }
+                { type: 'normal', health: 2000, size: 85, speed: 0.125, damage: 8, name: 'Normal Boss' },
+                { type: 'purple', health: 4500, size: 95, speed: 0.14, damage: 10, name: 'Purple Boss' },
+                { type: 'elite', health: 6700, size: 105, speed: 0.15, damage: 12, name: 'Elite Boss' },
+                { type: 'advanced', health: 8000, size: 110, speed: 0.16, damage: 14, name: 'Advanced Boss' },
+                { type: 'supreme', health: 10000, size: 115, speed: 0.17, damage: 16, name: 'Supreme Boss' },
+                { type: 'final', health: 20000, size: 125, speed: 0.18, damage: 18, name: 'Final Boss' },
+                { type: 'ultra', health: 30000, size: 135, speed: 0.19, damage: 20, name: 'Ultra Boss' },
+                { type: 'mega', health: 50000, size: 150, speed: 0.2, damage: 22, name: 'Mega Boss' },
+                { type: 'titan', health: 80000, size: 165, speed: 0.21, damage: 25, name: 'Titan Boss' },
+                { type: 'apocalypse', health: 100000, size: 180, speed: 0.225, damage: 30, name: 'Apocalypse Boss' }
             ];
             
             const config = bossConfigs[waveNum - 1];
@@ -846,7 +854,8 @@
                 isBoss: true,
                 bossType: config.type,
                 bossDamage: config.damage,
-                bossName: config.name
+                bossName: config.name,
+                isFinalBoss: waveNum === 10
             };
             
             zombies.push(boss);
@@ -1030,7 +1039,12 @@
         function drawZombie(zombie) {
             let bodyColor, headColor, eyeColor;
             
-            if (zombie.isBoss) {
+            // Runner зомбита са със специален цвят
+            if (zombie.isRunner) {
+                bodyColor = '#e67e22';
+                headColor = '#f39c12';
+                eyeColor = '#000';
+            } else if (zombie.isBoss) {
                 if (zombie.bossType === 'mega') {
                     bodyColor = '#1a0033';
                     headColor = '#330066';
@@ -1514,15 +1528,14 @@
                             if (dist < bullet.explosionRadius) {
                                 z.health -= bullet.damage;
                                 if (z.health <= 0) {
-                                    zombies.splice(zi, 1);
-                                    kills++;
-                                    money += z.isBoss ? 10 : 1;
-                                }
-                            }
-                        });
-                        
-                        bullets.splice(bIndex, 1);
-                        updateUI();
+                                        const wasFinalBoss = z.isFinalBoss;
+                                        zombies.splice(zi, 1);
+                                        kills++;
+                                        money += z.isBoss ? 10 : 1;
+                                        // Проверка дали е последния босс
+                                        if (wasFinalBoss) {
+                                            gameWin();
+                                        }
                     }
                     return;
                 }
@@ -1549,18 +1562,28 @@
                                 if (dist < bullet.explosionRadius) {
                                     z.health -= bullet.damage;
                                     if (z.health <= 0) {
+                                        const wasFinalBoss = z.isFinalBoss;
                                         zombies.splice(zi, 1);
                                         kills++;
                                         money += z.isBoss ? 10 : 1;
+                                        // Проверка дали е последния босс
+                                        if (wasFinalBoss) {
+                                            gameWin();
+                                        }
                                     }
                                 }
                             });
                         } else {
                             zombie.health -= bullet.damage;
                             if (zombie.health <= 0) {
+                                const wasFinalBoss = zombie.isFinalBoss;
                                 zombies.splice(zIndex, 1);
                                 kills++;
                                 money += zombie.isBoss ? 10 : 1;
+                                // Проверка дали е последния босс
+                                if (wasFinalBoss) {
+                                    gameWin();
+                                }
                             }
                         }
                         
@@ -1641,6 +1664,24 @@
             gameRunning = false;
             document.getElementById('finalKills').textContent = kills;
             document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        // Game win
+        function gameWin() {
+            gameRunning = false;
+            document.getElementById('bossHealthDisplay').style.display = 'none';
+            
+            // Показване на съобщение за победа
+            const gameOverDiv = document.getElementById('gameOver');
+            gameOverDiv.querySelector('h2').textContent = '🎉 ПОБЕДА! 🎉';
+            gameOverDiv.querySelector('p').textContent = 'Победихте всички босове!';
+            document.getElementById('finalKills').textContent = kills;
+            gameOverDiv.style.display = 'block';
+            
+            // Автоматично рестартиране след 3 секунди
+            setTimeout(() => {
+                restartGame();
+            }, 3000);
         }
         
         // Restart game
