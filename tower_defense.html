@@ -855,7 +855,8 @@
                 bossType: config.type,
                 bossDamage: config.damage,
                 bossName: config.name,
-                isFinalBoss: waveNum === 10
+                isFinalBoss: waveNum === 10,
+                isWaveBoss: true
             };
             
             zombies.push(boss);
@@ -1130,20 +1131,78 @@
             
             // Boss crown/skull/demon
             if (zombie.isBoss) {
-                ctx.font = (zombie.bossType === 'apocalypse' ? '50' : zombie.bossType === 'titan' ? '45' : zombie.bossType === 'mega' ? '40' : zombie.bossType === 'ultra' ? '38' : zombie.bossType === 'final' ? '35' : '20') + 'px Arial';
-                ctx.textAlign = 'center';
-                if (zombie.bossType === 'apocalypse') {
-                    ctx.fillText('☠️', zombie.x + zombie.width / 2, zombie.y - 120);
-                } else if (zombie.bossType === 'titan') {
-                    ctx.fillText('⚡', zombie.x + zombie.width / 2, zombie.y - 110);
-                } else if (zombie.bossType === 'mega') {
-                    ctx.fillText('👹', zombie.x + zombie.width / 2, zombie.y - 100);
-                } else if (zombie.bossType === 'ultra') {
-                    ctx.fillText('🔥', zombie.x + zombie.width / 2, zombie.y - 90);
-                } else if (zombie.bossType === 'final') {
-                    ctx.fillText('💀', zombie.x + zombie.width / 2, zombie.y - 80);
+                // Wave босовете имат специални визуални ефекти
+                if (zombie.isWaveBoss) {
+                    // Светеща аура около wave босовете
+                    ctx.shadowColor = zombie.bossType === 'apocalypse' ? '#FFFF00' : 
+                                      zombie.bossType === 'titan' ? '#00FF00' : 
+                                      zombie.bossType === 'mega' ? '#FF00FF' : 
+                                      zombie.bossType === 'ultra' ? '#FFA500' : 
+                                      zombie.bossType === 'final' ? '#FF0000' : '#FFD700';
+                    ctx.shadowBlur = 30;
+                    
+                    // Двойна корона/икона за wave босове
+                    ctx.font = (zombie.bossType === 'apocalypse' ? '60' : zombie.bossType === 'titan' ? '55' : zombie.bossType === 'mega' ? '50' : zombie.bossType === 'ultra' ? '48' : zombie.bossType === 'final' ? '45' : '30') + 'px Arial';
+                    ctx.textAlign = 'center';
+                    
+                    // Ефект на пулсиране
+                    const pulse = Math.sin(Date.now() / 200) * 0.15 + 1;
+                    const iconY = zombie.bossType === 'apocalypse' ? zombie.y - 140 : 
+                                  zombie.bossType === 'titan' ? zombie.y - 130 : 
+                                  zombie.bossType === 'mega' ? zombie.y - 120 : 
+                                  zombie.bossType === 'ultra' ? zombie.y - 110 : 
+                                  zombie.bossType === 'final' ? zombie.y - 100 : zombie.y - 60;
+                    
+                    ctx.save();
+                    ctx.translate(zombie.x + zombie.width / 2, iconY);
+                    ctx.scale(pulse, pulse);
+                    ctx.translate(-(zombie.x + zombie.width / 2), -iconY);
+                    
+                    if (zombie.bossType === 'apocalypse') {
+                        ctx.fillText('☠️', zombie.x + zombie.width / 2, iconY);
+                        ctx.fillText('🔥', zombie.x + zombie.width / 2 - 40, iconY);
+                        ctx.fillText('🔥', zombie.x + zombie.width / 2 + 40, iconY);
+                    } else if (zombie.bossType === 'titan') {
+                        ctx.fillText('⚡', zombie.x + zombie.width / 2, iconY);
+                        ctx.fillText('👑', zombie.x + zombie.width / 2 - 35, iconY);
+                        ctx.fillText('👑', zombie.x + zombie.width / 2 + 35, iconY);
+                    } else if (zombie.bossType === 'mega') {
+                        ctx.fillText('👹', zombie.x + zombie.width / 2, iconY);
+                        ctx.fillText('💀', zombie.x + zombie.width / 2 - 35, iconY - 10);
+                        ctx.fillText('💀', zombie.x + zombie.width / 2 + 35, iconY - 10);
+                    } else if (zombie.bossType === 'ultra') {
+                        ctx.fillText('🔥', zombie.x + zombie.width / 2, iconY);
+                        ctx.fillText('⚡', zombie.x + zombie.width / 2 - 30, iconY);
+                        ctx.fillText('⚡', zombie.x + zombie.width / 2 + 30, iconY);
+                    } else if (zombie.bossType === 'final') {
+                        ctx.fillText('💀', zombie.x + zombie.width / 2, iconY);
+                        ctx.fillText('🔥', zombie.x + zombie.width / 2 - 30, iconY);
+                        ctx.fillText('🔥', zombie.x + zombie.width / 2 + 30, iconY);
+                    } else {
+                        ctx.fillText('👑', zombie.x + zombie.width / 2, iconY);
+                        ctx.fillText('⭐', zombie.x + zombie.width / 2 - 25, iconY);
+                        ctx.fillText('⭐', zombie.x + zombie.width / 2 + 25, iconY);
+                    }
+                    
+                    ctx.restore();
+                    ctx.shadowBlur = 0;
                 } else {
-                    ctx.fillText('👑', zombie.x + zombie.width / 2, zombie.y - 45);
+                    // Обикновените босове по време на вълната
+                    ctx.font = (zombie.bossType === 'apocalypse' ? '50' : zombie.bossType === 'titan' ? '45' : zombie.bossType === 'mega' ? '40' : zombie.bossType === 'ultra' ? '38' : zombie.bossType === 'final' ? '35' : '20') + 'px Arial';
+                    ctx.textAlign = 'center';
+                    if (zombie.bossType === 'apocalypse') {
+                        ctx.fillText('☠️', zombie.x + zombie.width / 2, zombie.y - 120);
+                    } else if (zombie.bossType === 'titan') {
+                        ctx.fillText('⚡', zombie.x + zombie.width / 2, zombie.y - 110);
+                    } else if (zombie.bossType === 'mega') {
+                        ctx.fillText('👹', zombie.x + zombie.width / 2, zombie.y - 100);
+                    } else if (zombie.bossType === 'ultra') {
+                        ctx.fillText('🔥', zombie.x + zombie.width / 2, zombie.y - 90);
+                    } else if (zombie.bossType === 'final') {
+                        ctx.fillText('💀', zombie.x + zombie.width / 2, zombie.y - 80);
+                    } else {
+                        ctx.fillText('👑', zombie.x + zombie.width / 2, zombie.y - 45);
+                    }
                 }
             }
             
